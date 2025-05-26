@@ -4,7 +4,8 @@ extends Node3D
 
 @export var start : bool = false : set = set_start
 func set_start(val:bool)->void:
-	generate()
+	if Engine.is_editor_hint():
+		generate()
 
 @export_range(0, 1) var chance : float = 0.25
 @export var border_size : int = 20 : set = set_border_size
@@ -18,6 +19,10 @@ func set_border_size(val : int)->void:
 @export var max_room_size : int = 4
 @export var room_margin : int = 1 #Mindestanzahl, damit Räume nicht überlappen
 @export var room_recursion : int = 15 #ansonsten gibt es stack overflow bei zu vielen Räumen
+@export_multiline var custom_seed : String = "" : set = set_seed
+func set_seed(val:String)->void:
+	custom_seed = val
+	seed(val.hash())
 
 var room_tiles : Array[PackedVector3Array] = []
 var room_positions : PackedVector3Array = []
@@ -33,9 +38,13 @@ func show_border():
 func generate():
 	room_tiles.clear()
 	room_positions.clear()
+	var t : int = 0
+	if custom_seed : set_seed(custom_seed)
 	show_border()
 	for i in room_number:
+		t+=1
 		generate_room(room_recursion)
+		if t%17 == 16: await get_tree().create_timer(0).timeout
 	
 	var rpv2 : PackedVector2Array = []
 	var del_graph : AStar2D = AStar2D.new()
@@ -108,6 +117,25 @@ func generate_hallways(hallway_graph:AStar2D):
 				hallways.append(hallway)
 				grid_map.set_cell_item(tile_from, 2)
 				grid_map.set_cell_item(tile_to, 2)
+	
+	var astar : AStarGrid2D = AStarGrid2D.new()
+	astar.size = Vector2i.ONE * border_size
+	astar.update()
+	astar.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	astar.default_estimate_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
+	
+	for t in grid_map.get_used_cells_by_item(0):
+		astar.set_point_solid(Vector2i(t.x,t.z))
+		
+	for h in hallways:
+		var pos_from : Vector2i = Vector2i(h[0].x, h[0].z)
+		var pos_to : Vector2i = Vector2i(h[1].x, h[1].z)
+		var hall : PackedVector2Array = astar.get_point_path(pos_from, pos_to)
+		
+		for t in hall:
+			var pos: Vector3i = Vector3i(t.x,0,t.y)
+			if grid_map.get_cell_item(pos) < 0:
+				grid_map.set_cell_item(pos, 1)
 	
 func generate_room(rec:int):
 	
