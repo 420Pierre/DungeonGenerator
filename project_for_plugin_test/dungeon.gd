@@ -1,6 +1,5 @@
 @tool
 extends Node3D
-
 @onready var grid_map : GridMap = $GridMap
 @export var start : bool = false : set = set_start
 
@@ -43,7 +42,9 @@ func generate():
 	if custom_seed : set_seed(custom_seed)
 	show_border()
 	for i in room_number:
+		t += 1
 		generate_room(room_recursion)
+		if t % 17 == 16: await get_tree().create_timer(0).timeout
 	
 	var rpv2 : PackedVector2Array = []
 	var del_graph : AStar2D = AStar2D.new()
@@ -131,7 +132,9 @@ func generate_hallways(hallway_graph : AStar2D):
 	for t in grid_map.get_used_cells_by_item(0):
 		astar.set_point_solid(Vector2i(t.x, t.z))
 
+	var _t : int = 0
 	for h in hallways:
+		_t += 1
 		var pos_from : Vector2i = Vector2i(h[0].x, h[0].z)
 		var pos_to : Vector2i = Vector2i(h[1].x, h[1].z)
 		var hall : PackedVector2Array = astar.get_point_path(pos_from, pos_to)
@@ -140,6 +143,9 @@ func generate_hallways(hallway_graph : AStar2D):
 			var pos: Vector3i = Vector3i(t.x, 0, t.y)
 			if grid_map.get_cell_item(pos) < 0:
 				grid_map.set_cell_item(pos, 1) # setze Hallway-Tile
+		
+		if _t % 16 == 15:
+			await get_tree().create_timer(0).timeout
 
 func generate_room(rec: int):
 	if !rec > 0:

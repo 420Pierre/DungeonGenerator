@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cc4geqdmxgl1o"]
+
+[ext_resource type="Script" path="res://textures/design_dungeon.gd" id="1_4k7p5"]
+
+[node name="DesignDungeon" type="Node3D"]
+script = ExtResource("1_4k7p5")
